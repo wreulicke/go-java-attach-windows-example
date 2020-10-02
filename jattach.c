@@ -1,3 +1,5 @@
+// This file is originally from https://github.com/apangin/jattach.
+
 /*
  * Copyright 2016 Andrei Pangin
  *
@@ -180,7 +182,6 @@ extern int inject_thread(int pid, char* pipeName, int argc, char** argv) {
         print_error("Could not create remote thread", GetLastError());
         success = 0;
     } else {
-        printf("Connected to remote process\n");
         WaitForSingleObject(hThread, INFINITE);
         DWORD exitCode;
         GetExitCodeThread(hThread, &exitCode);
@@ -199,7 +200,7 @@ extern int inject_thread(int pid, char* pipeName, int argc, char** argv) {
 }
 
 // JVM response is read from the pipe and mirrored to stdout
-static int read_response(HANDLE hPipe, void* ch, Callbacks cb) {
+static int read_response(HANDLE hPipe, uintptr_t ch, Callbacks cb) {
     ConnectNamedPipe(hPipe, NULL);
 
     char buf[8192];
@@ -221,7 +222,7 @@ static int read_response(HANDLE hPipe, void* ch, Callbacks cb) {
     return result;
 }
 
-extern int attach(void* ch, Callbacks cb, int pid, char* pipeName, int argc, char** argv) {
+int attach(uintptr_t ch, Callbacks cb, int pid, char* pipeName, int argc, char** argv) {
     HANDLE hPipe = CreateNamedPipe(pipeName, PIPE_ACCESS_INBOUND, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         1, 4096, 8192, NMPWAIT_USE_DEFAULT_WAIT, NULL);
     if (hPipe == NULL) {
@@ -229,7 +230,6 @@ extern int attach(void* ch, Callbacks cb, int pid, char* pipeName, int argc, cha
         return 1;
     }
 
-    printf("called");
     if (!inject_thread(pid, pipeName, argc, argv)) {
         CloseHandle(hPipe);
         return 1;

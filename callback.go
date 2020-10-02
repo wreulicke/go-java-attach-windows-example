@@ -1,12 +1,12 @@
 package main
 
 /*
-extern void callback(void* ch, char* buf);
-void _callback(void* ch, char* buf) {
+extern void callback(uintptr_t ch, char* buf);
+void _callback(uintptr_t ch, char* buf) {
   callback(ch, buf);
 }
-extern void closeCallback(void* ch, int r);
-void _closeCallback(void* ch, int r) {
+extern void closeCallback(uintptr_t ch, int r);
+void _closeCallback(uintptr_t ch, int r) {
   closeCallback(ch, r);
 }
 */

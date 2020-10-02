@@ -4,8 +4,8 @@ package main
 #include "jattach.h"
 #cgo LDFLAGS: -L. -ljattach
 
-extern void _callback(void* ch, char* buf);
-extern void _closeCallback(void* ch, int r);
+extern void _callback(uintptr_t ch, char* buf);
+extern void _closeCallback(uintptr_t ch, int r);
 */
 import "C"
 import (
@@ -19,14 +19,16 @@ import (
 type Channel chan string
 
 //export closeCallback
-func closeCallback(p unsafe.Pointer, r C.int) {
-	pi := *(*Channel)(p)
+func closeCallback(p C.uintptr_t, r C.int) {
+	fmt.Println("called closeCallback")
+	pi := *(*Channel)(unsafe.Pointer(uintptr(p)))
 	close(pi)
 }
 
 //export callback
-func callback(p unsafe.Pointer, ch *C.char) {
-	pi := *(*Channel)(p)
+func callback(p C.uintptr_t, ch *C.char) {
+	fmt.Println("called callback")
+	pi := *(*Channel)(unsafe.Pointer(uintptr(p)))
 	pi <- C.GoString(ch)
 }
 
@@ -46,7 +48,12 @@ func mainInternal() error {
 	cCallbacks.callback = C.CallbackFn(C._callback)
 	cCallbacks.closeCallback = C.CloseCallbackFn(C._closeCallback)
 	pipename := `\\.\pipe\javatool` + os.Args[1]
-	C.attach(unsafe.Pointer(&ch), cCallbacks, C.int(pid), C.CString(pipename), C.int(len(os.Args)-2), (**C.char)(cArray))
+	go func() {
+		r := C.attach(C.uintptr_t(uintptr(unsafe.Pointer(&ch))), cCallbacks, C.int(pid), C.CString(pipename), C.int(len(os.Args)-2), (**C.char)(cArray))
+		if r != C.int(0) {
+			fmt.Println("attach is failed")
+		}
+	}()
 	for x := range ch {
 		fmt.Println(x)
 	}
