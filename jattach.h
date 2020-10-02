@@ -1,0 +1,1 @@
+extern int attach(int pid, char* pipeName, int argc, char** argv);
