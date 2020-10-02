@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <Windows.h>
+#include "jattach.h"
 
 typedef HMODULE (WINAPI *GetModuleHandle_t)(LPCTSTR lpModuleName);
 typedef FARPROC (WINAPI *GetProcAddress_t)(HMODULE hModule, LPCSTR lpProcName);
@@ -30,7 +31,6 @@ typedef struct {
     char pipeName[MAX_PATH];
     char args[4][MAX_PATH];
 } CallData;
-
 
 #pragma check_stack(off)
 
@@ -199,7 +199,7 @@ extern int inject_thread(int pid, char* pipeName, int argc, char** argv) {
 }
 
 // JVM response is read from the pipe and mirrored to stdout
-static int read_response(HANDLE hPipe) {
+static int read_response(HANDLE hPipe, void* ch, Callbacks cb) {
     ConnectNamedPipe(hPipe, NULL);
 
     char buf[8192];
@@ -214,13 +214,14 @@ static int read_response(HANDLE hPipe) {
     int result = atoi(buf);
 
     do {
-        fwrite(buf, 1, bytesRead, stdout);
+        cb.callback(ch, buf);
     } while (ReadFile(hPipe, buf, sizeof(buf), &bytesRead, NULL));
 
+    cb.closeCallback(ch, result);
     return result;
 }
 
-extern int attach(int pid, char* pipeName, int argc, char** argv) {
+extern int attach(void* ch, Callbacks cb, int pid, char* pipeName, int argc, char** argv) {
     HANDLE hPipe = CreateNamedPipe(pipeName, PIPE_ACCESS_INBOUND, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         1, 4096, 8192, NMPWAIT_USE_DEFAULT_WAIT, NULL);
     if (hPipe == NULL) {
@@ -228,12 +229,13 @@ extern int attach(int pid, char* pipeName, int argc, char** argv) {
         return 1;
     }
 
+    printf("called");
     if (!inject_thread(pid, pipeName, argc, argv)) {
         CloseHandle(hPipe);
         return 1;
     }
 
-    int result = read_response(hPipe);
+    int result = read_response(hPipe, ch, cb);
     CloseHandle(hPipe);
     return result;
 }
