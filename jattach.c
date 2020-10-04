@@ -18,7 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <Windows.h>
+#include <windows.h>
 #include "jattach.h"
 
 typedef HMODULE (WINAPI *GetModuleHandle_t)(LPCTSTR lpModuleName);
